@@ -22,9 +22,9 @@ class RenderWindow(pyglet.window.Window):
         '''
         View (camera) parameters
         '''
-        self.cam_eye = Vec3(0,2,4)
+        self.cam_eye = Vec3(0,-4,3)
         self.cam_target = Vec3(0,0,0)
-        self.cam_vup = Vec3(0,1,0)
+        self.cam_vup = Vec3(0,0,1)
         self.view_mat = None
         '''
         Projection parameters
@@ -61,6 +61,9 @@ class RenderWindow(pyglet.window.Window):
         self.batch.draw()
 
     def update(self,dt) -> None:
+        self.view_mat = Mat4.look_at(
+            self.cam_eye, target=self.cam_target, up=self.cam_vup)
+
         view_proj = self.proj_mat @ self.view_mat
         for i, shape in enumerate(self.shapes):
             '''
@@ -81,7 +84,7 @@ class RenderWindow(pyglet.window.Window):
             Update view and projection matrix. There exist only one view and projection matrix 
             in the program, so we just assign the same matrices for all the shapes
             '''
-            shape.shader_program['view_proj'] = view_proj
+            shape.shader_program['vp'] = view_proj
 
     def on_resize(self, width, height):
         glViewport(0, 0, *self.get_framebuffer_size())
@@ -89,7 +92,7 @@ class RenderWindow(pyglet.window.Window):
             aspect = width/height, z_near=self.z_near, z_far=self.z_far, fov = self.fov)
         return pyglet.event.EVENT_HANDLED
 
-    def add_shape(self, transform, vertice, indice, color):
+    def add_shape(self, transform, vertice, normal, indice, color):
         
         '''
         Assign a group for each shape
@@ -100,6 +103,7 @@ class RenderWindow(pyglet.window.Window):
                         group = shape,
                         indices = indice,
                         vertices = ('f', vertice),
+                        normals = ('f', normal),
                         colors = ('Bn', color))
         self.shapes.append(shape)
          

@@ -16,6 +16,7 @@ class CustomGroup(pyglet.graphics.Group):
         '''
         Create shader program for each shape
         '''
+        print("Shader : ", shader)
         self.shader_program = shader.create_program(
             shader.vertex_source_default, shader.fragment_source_default
         )
@@ -55,7 +56,9 @@ class Cube:
             0.5,0.5,-0.5,
             -0.5,0.5,-0.5]
         self.vertices = [scale[idx%3] * x for idx, x in enumerate(self.vertices)]
-    
+
+        self.normals = [x * 2 / math.sqrt(2) for x in self.vertices]
+
         self.indices = [0, 1, 2, 2, 3, 0,
                     4, 7, 6, 6, 5, 4,
                     4, 5, 1, 1, 0, 4,
@@ -154,5 +157,6 @@ class Sphere:
                     self.colors += (int(math.cos(phi0) * 255),int(math.cos(theta0) * 255),int(math.sin(phi0)*255),255)
                     self.colors += (int(math.cos(phi0) * 255),int(math.cos(theta0) * 255),int(math.sin(phi0)*255),255)
 
+        self.normals = [x / scale for x in self.vertices]
         for i in range(num_triangles*3):
             self.indices.append(i)

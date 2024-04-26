@@ -1,10 +1,12 @@
+import time
+
 import pyglet
 from pyglet.math import Mat4, Vec3
 
 from render import RenderWindow
 from primitives import Cube,Sphere
 from control import Control
-
+from cMesh import cMesh
 
 if __name__ == '__main__':
     width = 1280
@@ -23,12 +25,22 @@ if __name__ == '__main__':
 
     scale_vec = Vec3(x=1, y=1, z=1)
 
+    myMesh = cMesh()
+    myMesh.read_obj('./model/Subdivision/cross_cube.obj')
+    myMesh.toEdgeFriend()
+    ti = time.time()
+    myMesh.subdivide()
+    myMesh.subdivide()
+    myMesh.subdivide()
+    myMesh.subdivide()
+    myMesh.subdivide()
+    te = time.time()
+    print(te - ti)
     cube1 = Cube(scale_vec)
     cube2 = Cube(Vec3(x=1.5, y=1.5, z=1.5))
     sphere = Sphere(30,30)
-    renderer.add_shape(translate_mat1, cube1.vertices, cube1.indices, cube1.colors)
-    renderer.add_shape(translate_mat2, sphere.vertices, sphere.indices, sphere.colors)
-    renderer.add_shape(translate_mat3, cube2.vertices, cube1.indices, cube1.colors)
 
     #draw shapes
+    renderer.add_shape(translate_mat2, myMesh.edgeFriend.vertices, myMesh.getNormals(), myMesh.getIndices(), ((255, 255, 0, 255) * (len(myMesh.edgeFriend.vertices)//3)))
+
     renderer.run()

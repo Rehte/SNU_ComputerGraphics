@@ -27,7 +27,14 @@ class Control:
         pass
 
     def on_key_press(self, symbol, modifier):
-        # TODO:
+        if symbol == pyglet.window.key.W:
+            self.window.cam_eye += Vec3(0, 0, 0.1)
+        if symbol == pyglet.window.key.S:
+            self.window.cam_eye += Vec3(0, 0, -0.1)
+        if symbol == pyglet.window.key.A:
+            self.window.cam_eye += Vec3(-0.1, 0, 0)
+        if symbol == pyglet.window.key.D:
+            self.window.cam_eye += Vec3(0.1, 0, 0)
         pass
     
     def on_key_release(self, symbol, modifier):
