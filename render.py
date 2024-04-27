@@ -11,7 +11,7 @@ import shader
 from primitives import CustomGroup
 
 
-
+glBindImageTextures
 class RenderWindow(pyglet.window.Window):
     '''
     inherits pyglet.window.Window which is the default render window of Pyglet

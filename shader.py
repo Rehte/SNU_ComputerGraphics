@@ -35,7 +35,7 @@ out vec4 outColor;
 void main()
 {
     vec3 lightDir = normalize(vec3(1, 1, -2));
-    vec4 newColor = min(0.3f * dot(lightDir, -newNormal) + 0.7f, 1.0f) * color;
+    vec4 newColor = min(0.5f * dot(lightDir, -newNormal) + 0.5f, 1.0f) * color;
 
     outColor = newColor;
 }
