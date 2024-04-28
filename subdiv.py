@@ -8,7 +8,7 @@ import numpy as np
 import metalcompute as mc
 
 class edgeFriendMesh:
-    def __init__(self, vertices, indices=[], normals=[], colors=None, ):
+    def __init__(self, vertices, dev, indices=[], normals=[], colors=None):
         self.vertices = vertices
         self.normals = normals
         self.faceNormals = []
@@ -16,6 +16,8 @@ class edgeFriendMesh:
         self.i = []
         self.g = []
         self.l = []
+
+        self.dev = dev
 
     def getVertex(self, v):
         return Vec3(*self.vertices[v*3:v*3 + 3])
@@ -33,7 +35,7 @@ class edgeFriendMesh:
         return c ^ 3
 
     def subdivide(self):
-        newEdgeFriendMesh = edgeFriendMesh([None,] * (12 * len(self.l) - 18))
+        newEdgeFriendMesh = edgeFriendMesh(([None,] * (12 * len(self.l) - 18)), self.dev)
         newEdgeFriendMesh.i = [None,] * 4 * len(self.i)
         newEdgeFriendMesh.g = [None,] * 4 * len(self.g)
         newEdgeFriendMesh.l = [None,] * (4 * len(self.l) - 6)
@@ -120,9 +122,8 @@ class edgeFriendMesh:
         self.l = newEdgeFriendMesh.l
 
     def subdivideMetal(self):
-        dev = mc.Device()
 
-        kernel = dev.kernel("""
+        kernel = self.dev.kernel("""
         #include <metal_stdlib>
 
         #define getVertex(vertices,v) (float3(vertices[3 * v], vertices[3 * v + 1], vertices[3 * v + 2]))
@@ -259,7 +260,7 @@ class edgeFriendMesh:
         subdivide_fn = kernel.function("subdivide")
 
         if not type(self.vertices) == type(np.zeros(3)):
-            print(type(self.vertices), type(np.zeros(3)), "True")
+            # print(type(self.vertices), type(np.zeros(3)), "True")
             v_np = np.array(self.vertices, dtype='f')
             i_np = np.array(self.i, dtype=np.uint32)  # ui32 array
             g_np = np.array(self.g, dtype=np.uint32)
@@ -271,44 +272,44 @@ class edgeFriendMesh:
             l_np = self.l
 
         # Create mc buffer
-        v = dev.buffer(v_np)
-        i = dev.buffer(i_np)
-        g = dev.buffer(g_np)
-        l = dev.buffer(l_np)
+        v = self.dev.buffer(v_np)
+        i = self.dev.buffer(i_np)
+        g = self.dev.buffer(g_np)
+        l = self.dev.buffer(l_np)
 
         vertSize = v_np.size // 3 + i_np.size // 4 * 3
         faceSize = i_np.size
-        vp = dev.buffer(vertSize * 3 * 4)
-        ip = dev.buffer(4 * faceSize * 4)
-        gp = dev.buffer(2 * faceSize * 4)
-        lp = dev.buffer(vertSize * 4)
-        lenF = dev.buffer(np.array([i_np.size//4, ], dtype=np.uint32))
-        print(v_np.size, i_np.size, g_np.size, l_np.size)
-        print(vertSize * 3, 4 * faceSize, 2 * faceSize, vertSize)
+        vp = self.dev.buffer(vertSize * 3 * 4)
+        ip = self.dev.buffer(4 * faceSize * 4)
+        gp = self.dev.buffer(2 * faceSize * 4)
+        lp = self.dev.buffer(vertSize * 4)
+        lenF = self.dev.buffer(np.array([i_np.size//4, ], dtype=np.uint32))
+        # print(v_np.size, i_np.size, g_np.size, l_np.size)
+        # print(vertSize * 3, 4 * faceSize, 2 * faceSize, vertSize)
 
         handle = subdivide_fn(len(l_np), v, i, g, l, vp, ip, gp, lp, lenF)
-        print("WORKING")
+        # print("WORKING")
         del handle
-        print("SUCCESS")
+        # print("SUCCESS")
 
         self.vertices = np.frombuffer(vp, dtype='f')
-        print(type(self.vertices))
+        # print(type(self.vertices))
         self.i = np.frombuffer(ip, dtype=np.uint32)
         self.g = np.frombuffer(gp, dtype=np.uint32)
         self.l = np.frombuffer(lp, dtype=np.uint32)
 
     def printFace(self, q):
-        print(q, self.i[4*q:4*q+4])
+        # print(q, self.i[4*q:4*q+4])
         print([self.getVertex(i) for i in self.i[4*q:4*q+4]])
 
-    def calculateNormal(self):
+    def calculateNormals(self):
         self.faceNormals = []
         self.normals = []
         self.indices = []
         for i in range(len(self.i) // 4):
-            e1 = self.getVertex(self.i[4 * i + 0]) - self.getVertex(self.i[4 * i + 2])
+            e1 = self.getVertex(self.i[4 * i + 2]) - self.getVertex(self.i[4 * i + 0])
             e2 = self.getVertex(self.i[4 * i + 3]) - self.getVertex(self.i[4 * i + 1])
-            self.faceNormals.append(e2.cross(e1).normalize())
+            self.faceNormals.append(e1.cross(e2).normalize())
             if e1.mag > e2.mag:
                 self.indices += [self.i[i * 4 + 0], self.i[i * 4 + 1], self.i[i * 4 + 2]]
                 self.indices += [self.i[i * 4 + 2], self.i[i * 4 + 3], self.i[i * 4]]
@@ -329,3 +330,143 @@ class edgeFriendMesh:
                     break
             normalSum = normalSum.normalize()
             self.normals += list(normalSum)
+
+    def calculateFaceNormals(self):
+        self.faceNormals = None
+        self.indices = None
+
+        kernel = self.dev.kernel("""
+        #include <metal_stdlib>
+
+        #define getVertex(vertices,v) (float3(vertices[3 * v], vertices[3 * v + 1], vertices[3 * v + 2]))
+        
+        inline void setVertex(device float* vertices,  uint v, float3 vert) {
+            vertices[3 * v] = vert.x;
+            vertices[3 * v + 1] = vert.y;
+            vertices[3 * v + 2] = vert.z;
+        }
+
+        inline void setIndices(device uint* indices,  uint v, uint i0, uint i1, uint i2) {
+            indices[3 * v] = i0;
+            indices[3 * v + 1] = i1;
+            indices[3 * v + 2] = i2;
+        }
+
+        kernel void calculateFaceNormal(
+            const device float* v [[ buffer(0) ]],
+            const device  uint* i [[ buffer(1) ]],
+            device float* fn [[ buffer(2) ]],
+            device  uint* in [[ buffer(3) ]],
+            uint id [[ thread_position_in_grid ]]) 
+        {
+            float3 d0 = getVertex(v, i[4*id+2]) - getVertex(v, i[4*id]);
+            float3 d1 = getVertex(v, i[4*id+3]) - getVertex(v, i[4*id+1]);
+            setVertex(fn, id, metal::normalize(metal::cross(d0, d1)));
+            if (metal::length(d0) > metal::length(d1)) {
+                setIndices(in, 2*id+0, i[4*id+0], i[4*id+1], i[4*id+2]);
+                setIndices(in, 2*id+1, i[4*id+2], i[4*id+3], i[4*id+0]);
+            }
+            else {
+                setIndices(in, 2*id+0, i[4*id+1], i[4*id+2], i[4*id+3]);
+                setIndices(in, 2*id+1, i[4*id+3], i[4*id+0], i[4*id+1]);
+
+            }
+        }        
+        """)
+
+        subdivide_fn = kernel.function("calculateFaceNormal")
+
+        if not type(self.vertices) == type(np.zeros(3)):
+            # print(type(self.vertices), type(np.zeros(3)), "True")
+            v_np = np.array(self.vertices, dtype='f')
+            i_np = np.array(self.i, dtype=np.uint32)  # ui32 array
+        else:
+            v_np = self.vertices
+            i_np = self.i
+
+        # Create mc buffer
+        v = self.dev.buffer(v_np)
+        i = self.dev.buffer(i_np)
+
+        faceSize = i_np.size // 4
+        fN = self.dev.buffer(faceSize * 3 * 4)
+        iN = self.dev.buffer(faceSize * 6 * 4)
+
+        handle = subdivide_fn(faceSize, v, i, fN, iN)
+        # print("WORKING")
+        del handle
+        # print("SUCCESS")
+
+        self.faceNormals = np.frombuffer(fN, dtype='f')
+        self.indices = np.frombuffer(iN, dtype=np.uint32)
+
+    def calculateNormalsMetal(self):
+        self.calculateFaceNormals()
+        self.normals = None
+
+        kernel = self.dev.kernel("""
+        #include <metal_stdlib>
+
+        #define getVertex(vertices,v) (float3(vertices[3 * v], vertices[3 * v + 1], vertices[3 * v + 2]))
+        
+        inline void setVertex(device float* vertices,  uint v, float3 vert) {
+            vertices[3 * v] = vert.x;
+            vertices[3 * v + 1] = vert.y;
+            vertices[3 * v + 2] = vert.z;
+        }
+        
+        inline  uint c2q( uint c) {
+            return c/4;
+        }
+
+        kernel void calculateNormal(
+            const device float* fn [[ buffer(0) ]],
+            const device  uint* i [[ buffer(1) ]],
+            const device  uint* g [[ buffer(2) ]],
+            const device  uint* l [[ buffer(3) ]],
+            device float* vn [[ buffer(4) ]],
+            uint id [[ thread_position_in_grid ]])
+        {
+            uint n = 0;
+            uint c_first = l[id];
+            uint c = c_first;
+            float3 nSum = float3(0);
+            do{
+                n += 1;
+                 uint q = c2q(c);
+                nSum += getVertex(fn, q);
+                c = 2 * g[2 * q + ((c % 4 == 1 or c % 4 == 2) ? 0 : 1)] + c % 2;
+            } while(c != c_first || n > 10);
+
+            setVertex(vn, id, metal::normalize(nSum));
+        }
+        """)
+
+        subdivide_fn = kernel.function("calculateNormal")
+
+        if not type(self.vertices) == type(np.zeros(3)):
+            fn_np = np.array(self.faceNormals, dtype='f')
+            i_np = np.array(self.i, dtype=np.uint32)  # ui32 array
+            g_np = np.array(self.g, dtype=np.uint32)  # ui32 array
+            l_np = np.array(self.l, dtype=np.uint32)  # ui32 array
+        else:
+            fn_np = self.faceNormals
+            i_np = self.i
+            g_np = self.g
+            l_np = self.l
+
+        # Create mc buffer
+        fn = self.dev.buffer(fn_np)
+        i = self.dev.buffer(i_np)
+        g = self.dev.buffer(g_np)
+        l = self.dev.buffer(l_np)
+
+        vertSize = l_np.size
+        vn = self.dev.buffer(vertSize * 3 * 4)
+
+        handle = subdivide_fn(vertSize, fn, i, g, l, vn)
+        # print("WORKING")
+        del handle
+        # print("SUCCESS")
+
+        self.normals = np.frombuffer(vn, dtype='f')

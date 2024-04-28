@@ -3,6 +3,7 @@ import math
 from pyglet.gl import *
 
 from subdiv import *
+import metalcompute as mc
 
 
 class cFace:
@@ -64,8 +65,12 @@ class cMesh:
         self.faces = []
 
         self.edgeFriend = None
+        self.dev = mc.Device()
 
     def read_obj(self, filename):
+        self.vertices = []
+        self.faces = []
+        self.edgeFriend = None
         with open(filename, 'r') as file:
             for line in file:
                 if line.startswith('v '):
@@ -89,7 +94,7 @@ class cMesh:
         self.faces[0].BFS()
 
     def toEdgeFriend(self):
-        self.edgeFriend = edgeFriendMesh(np.array(self.vertices,dtype='f'))
+        self.edgeFriend = edgeFriendMesh(np.array(self.vertices,dtype='f'), self.dev)
         # TODO: preprocessing mesh ex) filling hole, first subdiv            
         self.BFS()
         
@@ -115,28 +120,9 @@ class cMesh:
         self.edgeFriend.subdivide()
 
     def get_normals(self):
-        self.edgeFriend.calculateNormal()
+        self.edgeFriend.calculateNormals()
         return self.edgeFriend.normals
-'''
-[-0.5555556 -0.5555556  0.5555556 -1.         0.         0.
- -0.75       0.         0.75      -0.75       0.        -0.75
- -0.5555556  0.5555556  0.5555556  0.         0.         1.
-  0.         0.75       0.75       0.        -0.75       0.75
- -0.5555556 -0.5555556 -0.5555556  0.         1.         0.
- -0.75       0.75       0.         0.75       0.75       0.
- -0.5555556  0.5555556 -0.5555556  1.         0.         0.
-  0.75       0.        -0.75       0.75       0.         0.75
-  0.5555556 -0.5555556  0.5555556  0.         0.        -1.
-  0.         0.75      -0.75       0.        -0.75      -0.75
-  0.5555556  0.5555556  0.5555556  0.        -1.         0.
-  0.75      -0.75       0.        -0.75      -0.75       0.
-  0.5555556 -0.5555556 -0.5555556  0.5555556  0.5555556 -0.5555556]
-[ 0  2  1 23  4 10  1  2 12  3  1 10  8 23  1  3 20  6  5 15  4  2  5  6
-  0  7  5  2 16 15  5  7 12 10  9 18  4  6  9 10 20 11  9  6 25 18  9 11
- 24 14 13 22 25 11 13 14 20 15 13 11 16 22 13 15 12 18 17  3 25 14 17 18
- 24 19 17 14  8  3 17 19 24 22 21 19 16  7 21 22  0 23 21  7  8 19 21 23]
-[ 3 44  5 10  7 16  1 38 11 28 13 18 15  0  9 42 19 32 21  2 23  8 17 26
- 27 40 29 34 31 20 25 14 35  4 37 22 39 24 33 46 43 36 45 30 47 12 41  6]
-[88  2 21 77 36 18 37 85 92 34  5 53 32 50 69 29 84 66 45 93 40 82 61 13
- 80 44]
-'''
+    
+    def get_normals_metal(self):
+        self.edgeFriend.calculateNormalsMetal()
+        return self.edgeFriend.normals

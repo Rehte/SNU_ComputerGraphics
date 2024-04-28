@@ -7,6 +7,9 @@ from pyglet.gl import GL_TRIANGLES
 from pyglet.math import Mat4, Vec3
 from pyglet.gl import *
 
+import math
+from cMesh import cMesh
+
 import shader
 from primitives import CustomGroup
 
@@ -38,6 +41,8 @@ class RenderWindow(pyglet.window.Window):
         self.setup()
 
         self.animate = False
+        self.t = 0
+        self.meshes = []
 
     def setup(self) -> None:
         self.set_minimum_size(width = 400, height = 300)
@@ -61,6 +66,31 @@ class RenderWindow(pyglet.window.Window):
         self.batch.draw()
 
     def update(self,dt) -> None:
+        self.t += dt
+        print(round(1/dt))
+
+        for i, mesh in enumerate(self.meshes):
+            mesh.read_obj('./model/Subdivision/cross_cube.obj')
+            mesh.vertices[78:80] = [-0.5 * math.cos(self.t) + -0.5, -3 - 0.5 * math.sin(self.t)]
+            mesh.vertices[45:47] = [0.5 * math.cos(self.t) + 0.5, 3 - 0.5 * math.sin(self.t)]
+            mesh.toEdgeFriend()
+            mesh.edgeFriend.subdivide()
+            print("inside event loop!")
+            mesh.edgeFriend.subdivide()
+            mesh.edgeFriend.subdivideMetal()
+            mesh.edgeFriend.subdivideMetal()
+            mesh.edgeFriend.subdivideMetal()
+        
+            vertice = mesh.edgeFriend.vertices
+            normal = mesh.get_normals_metal()
+            indice = mesh.get_indices()
+            
+            color = (255, 0, 0, 255) * (len(mesh.edgeFriend.vertices) // 3)
+
+            self.shapes[0].indexed_vertices_list.vertices = vertice
+            self.shapes[0].indexed_vertices_list.normals = normal
+            self.shapes[0].indexed_vertices_list.indices = indice
+
         self.view_mat = Mat4.look_at(
             self.cam_eye, target=self.cam_target, up=self.cam_vup)
 
@@ -97,7 +127,8 @@ class RenderWindow(pyglet.window.Window):
         '''
         Assign a group for each shape
         '''
-        shape = CustomGroup(transform, len(self.shapes))
+
+        shape = CustomGroup(transform, len(self.shapes), self)
         shape.indexed_vertices_list = shape.shader_program.vertex_list_indexed(len(vertice)//3, GL_TRIANGLES,
                         batch = self.batch,
                         group = shape,
@@ -108,7 +139,7 @@ class RenderWindow(pyglet.window.Window):
         self.shapes.append(shape)
          
     def run(self):
-        pyglet.clock.schedule_interval(self.update, 1/60)
+        pyglet.clock.schedule_interval(self.update, 1/120)
         pyglet.app.run()
 
     
