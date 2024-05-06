@@ -70,22 +70,22 @@ class RenderWindow(pyglet.window.Window):
         print(round(1/dt))
 
         for i, mesh in enumerate(self.meshes):
-            mesh.read_obj('./model/Subdivision/cross_cube.obj')
             mesh.vertices[78:80] = [-0.5 * math.cos(self.t) + -0.5, -3 - 0.5 * math.sin(self.t)]
             mesh.vertices[45:47] = [0.5 * math.cos(self.t) + 0.5, 3 - 0.5 * math.sin(self.t)]
+
             mesh.toEdgeFriend()
-            mesh.edgeFriend.subdivide()
-            print("inside event loop!")
-            mesh.edgeFriend.subdivide()
-            mesh.edgeFriend.subdivideMetal()
-            mesh.edgeFriend.subdivideMetal()
-            mesh.edgeFriend.subdivideMetal()
+            mesh.quadMesh.subdivide()
+            mesh.quadMesh.subdivide()
+            mesh.quadMesh.subdivide()
+            mesh.quadMesh.subdivide()
+            print()
+            print()
         
-            vertice = mesh.edgeFriend.vertices
-            normal = mesh.get_normals_metal()
-            indice = mesh.get_indices()
+            vertice = mesh.quadMesh.edgeFriend.vertices
+            normal = mesh.quadMesh.get_normals()
+            indice = mesh.quadMesh.get_indices()
             
-            color = (255, 0, 0, 255) * (len(mesh.edgeFriend.vertices) // 3)
+            color = (255, 0, 0, 255) * (len(mesh.quadMesh.edgeFriend.vertices) // 3)
 
             self.shapes[i].indexed_vertices_list.vertices = vertice
             self.shapes[i].indexed_vertices_list.normals = normal

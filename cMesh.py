@@ -1,37 +1,44 @@
 from pyglet.math import Mat4, Vec3, Vec4
 import math
 from pyglet.gl import *
+import numpy as np
 
-from subdiv import *
+from edgeFriend import *
 import metalcompute as mc
 
 class cVert:
-    def __init__(self, co : list, no, e):
-        self.co = co
-        self.no = no
+    def __init__(self, i, n = None):
+        self.i = i
+        self.n = n
 
-        self.e = None
+        self.e = []
 
+        self.mesh = None
         self.flag_selected = False
         self.flag_visible = True
         self.flag_temp = False
+
+    def get_coord(self):
+        return self.mesh.get_vertex(self.i)
+    
+    def set_coord(self, co):
+        self.mesh.set(self.i, co)
 
 class cEdge:
     def __init__(self, v : list):
         self.v0 = v[0]
         self.v1 = v[1]
 
-        self.l0 = None
-        self.l1 = None
-
-        self.e0n = None
-        self.e0p = None
-        self.e1n = None
-        self.e1p = None
+        self.l = []
 
         self.flag_selected = False
         self.flag_visible = True
         self.flag_temp = False
+
+    def get_loop(self, v):
+        for l in self.l:
+            if l.v == v:
+                return l
 
 class cLoop:
     def __init__(self, v, e, f):
@@ -44,16 +51,20 @@ class cLoop:
         self.lp = None
 
 class cFace:
-    def __init__(self, vertices : list, mesh):
-        self.vertices = vertices
+    def __init__(self, indices : list, mesh = None):
         self.mesh = mesh
 
+        self.indices = indices
+        self.len = len(indices)
+        self.l = None
+        
+
+        #For quad mesh only
+        self.quad_indices = indices if len(indices) == 4 else None
         self.faceFriend = [None, ] * 4
         self.isCalled = False
         self.edgeFriend = [None, ] * 2
         self.n = None
-
-        self.l = None
 
         self.flag_selected = False
         self.flag_visible = True
@@ -62,7 +73,7 @@ class cFace:
     def findFriend(self, face):
         for i, j in [[0, 3], [1, 0], [2, 1], [3, 2]]:
             for k in range(4):
-                if self.vertices[k] == face.vertices[i] and self.vertices[(k + 1) % 4] == face.vertices[j]:
+                if self.quad_indices[k] == face.quad_indices[i] and self.quad_indices[(k + 1) % 4] == face.quad_indices[j]:
                     face.faceFriend[j] = self
                     self.faceFriend[k] = face
 
@@ -70,26 +81,26 @@ class cFace:
         if face:
             if self.n is None:
                 self.n = len(self.mesh.edgeFriend.i) // 4
-                self.mesh.edgeFriend.i += self.vertices
+                self.mesh.edgeFriend.i += self.quad_indices
             i = self.faceFriend.index(face)
             j = face.faceFriend.index(self)
             if j % 2 == 0:
                 if i % 2 == 0:
-                    self.vertices = self.vertices[1:4] + self.vertices[0:1]
-                    self.mesh.edgeFriend.i[-4:] = self.vertices
+                    self.quad_indices = self.quad_indices[1:4] + self.quad_indices[0:1]
+                    self.mesh.edgeFriend.i[-4:] = self.quad_indices
                     self.faceFriend = self.faceFriend[1:4] + self.faceFriend[0:1]
                     i = self.faceFriend.index(face)
                 self.edgeFriend[i // 2] = (face.n * 4 + j) // 2
             else:
                 if i % 2 == 1:
-                    self.vertices = self.vertices[1:4] + self.vertices[0:1]
-                    self.mesh.edgeFriend.i[-4:] = self.vertices
+                    self.quad_indices = self.quad_indices[1:4] + self.quad_indices[0:1]
+                    self.mesh.edgeFriend.i[-4:] = self.quad_indices
                     self.faceFriend = self.faceFriend[1:4] + self.faceFriend[0:1]
                     i = self.faceFriend.index(face)
                 face.edgeFriend[j // 2] = (self.n * 4 + i) // 2
         else:
             self.n = 0
-            self.mesh.edgeFriend.i += self.vertices
+            self.mesh.edgeFriend.i += self.quad_indices
 
         if self.isCalled:
             return
@@ -99,21 +110,24 @@ class cFace:
             face.BFS(self)
 
     def __str__(self):
-        return f"{self.n}\t{self.edgeFriend[0]}\t{self.edgeFriend[1]}\n{self.vertices[0]}\t{self.vertices[1]}\t{self.vertices[2]}\t{self.vertices[3]}"
+        return f"{self.n}\t{self.edgeFriend[0]}\t{self.edgeFriend[1]}\n{self.quad_indices[0]}\t{self.quad_indices[1]}\t{self.quad_indices[2]}\t{self.quad_indices[3]}"
 
 
 class cMesh:
     def __init__(self):
         self.vertices = []
+        self.verts = []
+        self.edges = []
+        self.loops = []
         self.faces = []
 
+        self.quadMesh = None
         self.edgeFriend = None
         self.dev = mc.Device()
 
-    def read_obj(self, filename):
+    def read_obj_quad(self, filename):
         self.vertices = []
         self.faces = []
-        self.edgeFriend = None
         with open(filename, 'r') as file:
             for line in file:
                 if line.startswith('v '):
@@ -133,39 +147,44 @@ class cMesh:
     def get_vertex(self, n):
         return self.vertices[n * 3:n * 3 + 3]
 
+    def set_vertex(self, n, co):
+        self.vertices[n * 3:n * 3 + 3] = co
+
     def BFS(self):
         self.faces[0].BFS()
-
-    def toEdgeFriend(self):
-        self.edgeFriend = edgeFriendMesh(np.array(self.vertices,dtype='f'), self.dev)
-        # TODO: preprocessing mesh ex) filling hole, first subdiv            
-        self.BFS()
-        
-        self.edgeFriend.g = [None, ] * 2 * len(self.faces)
-        self.edgeFriend.l = [None, ] * (len(self.vertices) // 3)
-        # for face in self.faces:
-        #     print(face)
-        #     print(f"{face.n}\t{face.edgeFriend[0]}\t{face.edgeFriend[1]}")
-        #     print()
-        for face in self.faces:
-            self.edgeFriend.g[face.n * 2:face.n * 2 + 2] = face.edgeFriend
-            for i, v in enumerate(face.vertices):
-                self.edgeFriend.l[v] = face.n * 4 + i
-
-        self.edgeFriend.i = np.array(self.edgeFriend.i, dtype=np.uint32)  # ui32 array
-        self.edgeFriend.g = np.array(self.edgeFriend.g, dtype=np.uint32)
-        self.edgeFriend.l = np.array(self.edgeFriend.l, dtype=np.uint32)
 
     def get_indices(self):
         return self.edgeFriend.indices
 
     def subdivide(self):
-        self.edgeFriend.subdivide()
+        if len(self.edgeFriend.l) < 750:
+            self.edgeFriend.subdivide()
+        else:
+            self.edgeFriend.subdivideMetal()
 
     def get_normals(self):
-        self.edgeFriend.calculateNormals()
+        if len(self.edgeFriend.l) < 750:
+            self.edgeFriend.calculateNormals()
+        else:
+            self.edgeFriend.calculateNormalsMetal()
         return self.edgeFriend.normals
     
     def get_normals_metal(self):
         self.edgeFriend.calculateNormalsMetal()
         return self.edgeFriend.normals
+    
+    def export_obj_subdivided(self, filepath):
+        mesh = self.quadMesh.edgeFriend
+        with open(filepath, 'w') as f:
+            # Write vertices
+            for vert in np.reshape(mesh.vertices, (-1, 3)):
+                vert_str = " ".join([str(round(i, 7)) for i in vert])
+                f.write(f"v {vert_str}\n")
+
+            # Write faces (assuming faces are represented as lists of vertex indices)
+            for face in np.reshape(mesh.i, (-1, 4)):
+                # OBJ file format uses 1-based indexing for vertices
+                face_str = " ".join([str(i+1) for i in face])
+                f.write(f"f {face_str}\n")
+
+        print(f"Subdivided Mesh exported to {filepath}")

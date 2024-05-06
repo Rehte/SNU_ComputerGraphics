@@ -3,3 +3,4 @@ __pycache__/
 tutorial/
 .vscode/
 *.patch
+model/Subdivision/test.obj

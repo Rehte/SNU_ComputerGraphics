@@ -7,6 +7,8 @@ from pyglet.gl import *
 import numpy as np
 import metalcompute as mc
 
+DEV = mc.Device()
+
 class edgeFriendMesh:
     def __init__(self, vertices, dev, indices=[], normals=[], colors=None):
         self.vertices = vertices
@@ -43,6 +45,7 @@ class edgeFriendMesh:
             if i < len(self.l) - 2:
                 q = i
                 g0, g1 = self.g[2*q:2*q+2]
+                # print(len(self.i), (2 * g1 + 0))
                 v0 = self.i[2 * g1 + 0]
                 v1 = self.i[2 * g0 + 1]
                 v2 = self.i[2 * g0 + 0]
