@@ -87,9 +87,9 @@ class RenderWindow(pyglet.window.Window):
             
             color = (255, 0, 0, 255) * (len(mesh.edgeFriend.vertices) // 3)
 
-            self.shapes[0].indexed_vertices_list.vertices = vertice
-            self.shapes[0].indexed_vertices_list.normals = normal
-            self.shapes[0].indexed_vertices_list.indices = indice
+            self.shapes[i].indexed_vertices_list.vertices = vertice
+            self.shapes[i].indexed_vertices_list.normals = normal
+            self.shapes[i].indexed_vertices_list.indices = indice
 
         self.view_mat = Mat4.look_at(
             self.cam_eye, target=self.cam_target, up=self.cam_vup)

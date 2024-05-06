@@ -114,7 +114,7 @@ class edgeFriendMesh:
 
             w = (4 * i) if i < len(self.i)//4 else (3 * len(self.i)//4 + i)
             newEdgeFriendMesh.vertices[3*w:3*w+3] = list(newVert)
-            newEdgeFriendMesh.l[w] = 4 * self.l[i]
+            newEdgeFriendMesh.l[w] = 4 * c_first
 
         self.vertices = newEdgeFriendMesh.vertices
         self.i = newEdgeFriendMesh.i

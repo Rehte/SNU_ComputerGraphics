@@ -5,9 +5,46 @@ from pyglet.gl import *
 from subdiv import *
 import metalcompute as mc
 
+class cVert:
+    def __init__(self, co : list, no, e):
+        self.co = co
+        self.no = no
+
+        self.e = None
+
+        self.flag_selected = False
+        self.flag_visible = True
+        self.flag_temp = False
+
+class cEdge:
+    def __init__(self, v : list):
+        self.v0 = v[0]
+        self.v1 = v[1]
+
+        self.l0 = None
+        self.l1 = None
+
+        self.e0n = None
+        self.e0p = None
+        self.e1n = None
+        self.e1p = None
+
+        self.flag_selected = False
+        self.flag_visible = True
+        self.flag_temp = False
+
+class cLoop:
+    def __init__(self, v, e, f):
+        self.v = v
+        self.e = e
+        self.f = f
+
+        self.twin = None
+        self.ln = None
+        self.lp = None
 
 class cFace:
-    def __init__(self, vertices, mesh):
+    def __init__(self, vertices : list, mesh):
         self.vertices = vertices
         self.mesh = mesh
 
@@ -15,6 +52,12 @@ class cFace:
         self.isCalled = False
         self.edgeFriend = [None, ] * 2
         self.n = None
+
+        self.l = None
+
+        self.flag_selected = False
+        self.flag_visible = True
+        self.flag_temp = False
 
     def findFriend(self, face):
         for i, j in [[0, 3], [1, 0], [2, 1], [3, 2]]:
