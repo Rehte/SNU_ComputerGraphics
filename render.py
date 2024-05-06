@@ -8,6 +8,7 @@ from pyglet.math import Mat4, Vec3
 from pyglet.gl import *
 
 import math
+import sys
 from cMesh import cMesh
 
 import shader
@@ -69,27 +70,35 @@ class RenderWindow(pyglet.window.Window):
         self.t += dt
         print(round(1/dt))
 
-        for i, mesh in enumerate(self.meshes):
+        for mesh in self.meshes:
+            
             mesh.vertices[78:80] = [-0.5 * math.cos(self.t) + -0.5, -3 - 0.5 * math.sin(self.t)]
             mesh.vertices[45:47] = [0.5 * math.cos(self.t) + 0.5, 3 - 0.5 * math.sin(self.t)]
 
             mesh.toEdgeFriend()
-            mesh.quadMesh.subdivide()
-            mesh.quadMesh.subdivide()
-            mesh.quadMesh.subdivide()
-            mesh.quadMesh.subdivide()
+            mesh.subdivide()
+            mesh.subdivide()
+            if sys.platform == 'darwin':
+                mesh.subdivide()
+                mesh.subdivide()
             print()
-            print()
+
+            transform = mesh.shape.transform_mat
+            for i, vert in enumerate(mesh.verts):
+                loc = transform @ Mat4.from_translation(Vec3(*vert.get_coord()))
+                mesh.shape_controllPoints[i].transform_mat = loc
+
+            mesh.shape.indexed_vertices_list.vertices = mesh.vertices
         
             vertice = mesh.quadMesh.edgeFriend.vertices
-            normal = mesh.quadMesh.get_normals()
-            indice = mesh.quadMesh.get_indices()
+            normal = mesh.get_normals()
+            indice = mesh.get_indices()
             
             color = (255, 0, 0, 255) * (len(mesh.quadMesh.edgeFriend.vertices) // 3)
-
-            self.shapes[i].indexed_vertices_list.vertices = vertice
-            self.shapes[i].indexed_vertices_list.normals = normal
-            self.shapes[i].indexed_vertices_list.indices = indice
+            
+            mesh.subdivision_shape.indexed_vertices_list.vertices = vertice
+            mesh.subdivision_shape.indexed_vertices_list.normals = normal
+            mesh.subdivision_shape.indexed_vertices_list.indices = indice
 
         self.view_mat = Mat4.look_at(
             self.cam_eye, target=self.cam_target, up=self.cam_vup)
@@ -127,16 +136,26 @@ class RenderWindow(pyglet.window.Window):
         '''
         Assign a group for each shape
         '''
-
-        shape = CustomGroup(transform, len(self.shapes), self)
-        shape.indexed_vertices_list = shape.shader_program.vertex_list_indexed(len(vertice)//3, GL_TRIANGLES,
-                        batch = self.batch,
-                        group = shape,
-                        indices = indice,
-                        vertices = ('f', vertice),
-                        normals = ('f', normal),
-                        colors = ('Bn', color))
+        if normal is None:
+            shape = CustomGroup(transform, len(self.shapes), self, True)
+            shape.indexed_vertices_list = shape.shader_program.vertex_list_indexed(len(vertice)//3, GL_LINES,
+                            batch = self.batch,
+                            group = shape,
+                            indices = indice,
+                            vertices = ('f', vertice),
+                            colors = ('Bn', color))
+        else:
+            shape = CustomGroup(transform, len(self.shapes), self)
+            shape.indexed_vertices_list = shape.shader_program.vertex_list_indexed(len(vertice)//3, GL_TRIANGLES,
+                            batch = self.batch,
+                            group = shape,
+                            indices = indice,
+                            vertices = ('f', vertice),
+                            normals = ('f', normal),
+                            colors = ('Bn', color))
         self.shapes.append(shape)
+
+        return shape
          
     def run(self):
         pyglet.clock.schedule_interval(self.update, 1/120)

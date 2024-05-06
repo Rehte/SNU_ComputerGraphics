@@ -35,6 +35,8 @@ class Control:
             self.window.cam_eye += Vec3(-0.1, 0, 0)
         if symbol == pyglet.window.key.D:
             self.window.cam_eye += Vec3(0.1, 0, 0)
+        if symbol == pyglet.window.key.C:
+            self.window.meshes[0].export_obj_subdivided('./model/Subdivision/test.obj')
         pass
     
     def on_key_release(self, symbol, modifier):

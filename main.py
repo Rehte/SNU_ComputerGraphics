@@ -10,7 +10,8 @@ from control import Control
 from cMesh import cMesh
 from cMesh_operations import *
 
-from edgeFriend import edgeFriendMesh
+import cSpline
+
 if __name__ == '__main__':
     width = 1280
     height = 720
@@ -27,18 +28,22 @@ if __name__ == '__main__':
     # translate_mat2 = translate_mat2 @ Mat4.from_scale(Vec3(3, 3, 3))
     translate_mat3 = Mat4.from_translation(vector=Vec3(x=2, y=0, z=0))
 
+    translate_mat_bezier = Mat4.from_translation(vector=Vec3(x=3, y=5, z=0)) @ Mat4.from_rotation(math.pi, Vec3(0, 0, 1))
+    translate_mat_bspline = Mat4.from_translation(vector=Vec3(x=0, y=5, z=0)) @ Mat4.from_rotation(math.pi, Vec3(0, 0, 1))
+
     myMesh2 = cMesh()
     renderer.meshes.append(myMesh2)
     # myMesh2.read_obj('./model/Subdivision/cube.obj')
-    # myMesh2.read_obj('./model/Subdivision/cross_cube.obj')
-    myMesh2.read_obj('./model/Subdivision/icosahedron.obj')
+    myMesh2.read_obj('./model/Subdivision/cross_cube.obj')
+    # myMesh2.read_obj('./model/Subdivision/icosahedron.obj')
     myMesh2.toEdgeFriend()
 
     ti = time.time()
-    myMesh2.quadMesh.subdivide()
-    myMesh2.quadMesh.subdivide()
-    myMesh2.quadMesh.subdivide()
-    myMesh2.quadMesh.subdivide()
+    myMesh2.subdivide()
+    myMesh2.subdivide()
+    if sys.platform == 'darwin':
+        myMesh2.subdivide()
+        myMesh2.subdivide()
     te = time.time()
     print(te - ti)
 
@@ -46,6 +51,8 @@ if __name__ == '__main__':
     sphere = Sphere(30,30)
 
     #draw shapes
-    renderer.add_shape(translate_mat2, myMesh2.quadMesh.edgeFriend.vertices, myMesh2.quadMesh.get_normals(), myMesh2.quadMesh.get_indices(), ((255, 255, 0, 255) * (len(myMesh2.quadMesh.edgeFriend.vertices) // 3)))
+    myMesh2.add_shape_renderer(translate_mat2, renderer)
+    # renderer.add_shape(translate_mat_bezier, cSpline.bezier_vertices, cSpline.bezier_normals, cSpline.bezier_surface_indices, (0, 255, 255, 255) * (len(cSpline.bezier_vertices) // 3))
+    # renderer.add_shape(translate_mat_bspline, cSpline.b_spline_vertices, cSpline.b_spline_normals, cSpline.b_spline_surface_indices, (255, 0, 255, 255) * (len(cSpline.b_spline_vertices) // 3))
 
     renderer.run()

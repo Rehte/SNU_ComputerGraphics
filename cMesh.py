@@ -2,7 +2,9 @@ from pyglet.math import Mat4, Vec3, Vec4
 import math
 from pyglet.gl import *
 import numpy as np
+import sys
 
+from primitives import Sphere
 from edgeFriend import *
 import metalcompute as mc
 
@@ -57,7 +59,6 @@ class cFace:
         self.indices = indices
         self.len = len(indices)
         self.l = None
-        
 
         #For quad mesh only
         self.quad_indices = indices if len(indices) == 4 else None
@@ -114,12 +115,20 @@ class cFace:
 
 
 class cMesh:
+    controllPoint = Sphere(12, 12, 0.05)
+
     def __init__(self):
         self.vertices = []
         self.verts = []
         self.edges = []
         self.loops = []
         self.faces = []
+
+        self.shape = None
+        self.shape_controllPoints = []
+
+        self.subdivision_level = 0
+        self.subdivision_shape = None
 
         self.quadMesh = None
         self.edgeFriend = None
@@ -154,36 +163,49 @@ class cMesh:
         self.faces[0].BFS()
 
     def get_indices(self):
-        return self.edgeFriend.indices
+        return self.quadMesh.edgeFriend.indices
 
     def subdivide(self):
-        if len(self.edgeFriend.l) < 750:
-            self.edgeFriend.subdivide()
+        if sys.platform != 'darwin':
+            self.quadMesh.edgeFriend.subdivide()
         else:
-            self.edgeFriend.subdivideMetal()
+            self.quadMesh.edgeFriend.subdivideMetal()
 
     def get_normals(self):
-        if len(self.edgeFriend.l) < 750:
-            self.edgeFriend.calculateNormals()
+        if sys.platform !='darwin':
+            self.quadMesh.edgeFriend.calculateNormalsMetal()
         else:
-            self.edgeFriend.calculateNormalsMetal()
-        return self.edgeFriend.normals
+            self.quadMesh.edgeFriend.calculateNormalsMetal()
+        return self.quadMesh.edgeFriend.normals
     
     def get_normals_metal(self):
-        self.edgeFriend.calculateNormalsMetal()
-        return self.edgeFriend.normals
+        self.quadMesh.edgeFriend.calculateNormalsMetal()
+        return self.quadMesh.edgeFriend.normals
+    
+    def add_shape_renderer(self, transfrom, renderer):
+        colors = ((255, 255, 255, 255) * (len(self.vertices) // 3))
+        indices = []
+        for edge in self.edges:
+            indices.append(edge.v0.i)
+            indices.append(edge.v1.i)
+        self.shape = renderer.add_shape(transfrom, self.vertices, None, indices, colors)
+
+        colors = ((255, 255, 255, 255) * (len(self.controllPoint.vertices) // 3))
+        for vert in self.verts:
+            loc = transfrom @ Mat4.from_translation(Vec3(*vert.get_coord()))
+            self.shape_controllPoints.append(renderer.add_shape(loc, self.controllPoint.vertices, None, self.controllPoint.indices, colors))
+
+        colors = ((255, 255, 0, 255) * (len(self.quadMesh.edgeFriend.vertices) // 3))
+        self.subdivision_shape = renderer.add_shape(transfrom, self.quadMesh.edgeFriend.vertices, self.get_normals(), self.get_indices(), colors)
     
     def export_obj_subdivided(self, filepath):
         mesh = self.quadMesh.edgeFriend
         with open(filepath, 'w') as f:
-            # Write vertices
             for vert in np.reshape(mesh.vertices, (-1, 3)):
                 vert_str = " ".join([str(round(i, 7)) for i in vert])
                 f.write(f"v {vert_str}\n")
 
-            # Write faces (assuming faces are represented as lists of vertex indices)
             for face in np.reshape(mesh.i, (-1, 4)):
-                # OBJ file format uses 1-based indexing for vertices
                 face_str = " ".join([str(i+1) for i in face])
                 f.write(f"f {face_str}\n")
 

@@ -41,6 +41,36 @@ void main()
 }
 """
 
+vertex_source_flat = """
+#version 410
+layout(location =0) in vec3 vertices;
+layout(location =1) in vec4 colors;
+
+out vec4 color;
+
+// add a view-projection uniform and multiply it by the vertices
+uniform mat4 vp;
+uniform mat4 model;
+
+void main()
+{
+    gl_Position = vp * model * vec4(vertices, 1.0f); // local->world->vp
+    color = colors;
+}
+"""
+
+fragment_source_flat = """
+#version 410
+in vec4 color;
+
+out vec4 outColor;
+
+void main()
+{
+    outColor = color;
+}
+"""
+
 def create_program(vs_source, fs_source):
     # compile the vertex and fragment sources to a shader program
     vert_shader = Shader(vs_source, 'vertex')

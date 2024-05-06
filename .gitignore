@@ -4,3 +4,5 @@ tutorial/
 .vscode/
 *.patch
 model/Subdivision/test.obj
+model/Subdivision/test_bezier.obj
+model/Subdivision/test_bspline.obj
