@@ -20,6 +20,7 @@ class Control:
         self.window = window
         self.setup()
 
+        self.cam_height = 0  # Initial distance from the origin
         self.cam_distance = 5.0  # Initial distance from the origin
         self.cam_yaw = 0.0       # Horizontal rotation angle (yaw)
         self.cam_pitch = 0.0     # Vertical rotation angle (pitch)
@@ -39,13 +40,18 @@ class Control:
 
     def on_key_press(self, symbol, modifier):
         if symbol == pyglet.window.key.W:
-            self.cam_pitch += 0.5
+            self.cam_height += 0.2
+            # self.cam_pitch += 0.5
         if symbol == pyglet.window.key.S:
-            self.cam_pitch -= 0.5
+            self.cam_height -= 0.2
+            # self.cam_pitch -= 0.5
         if symbol == pyglet.window.key.A:
-            self.cam_yaw += 0.5
+            self.window.fov += 5
+            print(self.window.fov)
+            # self.cam_yaw += 0.5
         if symbol == pyglet.window.key.D:
-            self.cam_yaw -= 0.5
+            self.window.fov -= 5
+            # self.cam_yaw -= 0.5
         if symbol == pyglet.window.key.C:
             self.window.meshes[0].export_obj_subdivided('./model/Subdivision/test.obj')
         if symbol == pyglet.window.key.E:
@@ -62,6 +68,8 @@ class Control:
         if symbol == pyglet.window.key._4:
             self.window.meshes[0].subdivision_level = 4
             self.window.meshes[0].update_mesh = True
+        if symbol == pyglet.window.key.F:
+            self.window.meshes[0].base_color = (60, 40, 10, 255)
         self.update_camera()
     
     def on_key_release(self, symbol, modifier):
@@ -157,9 +165,10 @@ class Control:
     def update_camera(self):
         cam_x = self.cam_distance * math.cos(math.radians(self.cam_pitch)) * math.sin(math.radians(self.cam_yaw))
         cam_y = self.cam_distance * math.cos(math.radians(self.cam_pitch)) * math.cos(math.radians(self.cam_yaw))
-        cam_z = self.cam_distance * math.sin(math.radians(self.cam_pitch))
+        cam_z = self.cam_height + self.cam_distance * math.sin(math.radians(self.cam_pitch))
 
         self.window.cam_eye = Vec3(cam_x, cam_y, cam_z)
+        self.window.cam_target.z = self.cam_height
 
     def get_nearest_vertex(self, x, y):
         ray_near, ray_far = self.get_ray(x, y)

@@ -99,7 +99,7 @@ class RenderWindow(pyglet.window.Window):
     def update(self,dt) -> None:
         self.t += dt
         print(round(1/dt))
-
+        pyglet.gl.glClearColor(0.1, 0.1, 0.1, 1)
         for mesh in self.meshes:
             if self.doExtrusion:
                 for face in mesh.faces:
@@ -124,7 +124,7 @@ class RenderWindow(pyglet.window.Window):
                 indice = mesh.get_indices()
             
                 if mesh.update_mesh:
-                    color = (255, 255, 0, 255) * (len(mesh.quadMesh.edgeFriend.vertices) // 3)
+                    color = mesh.base_color * (len(mesh.quadMesh.edgeFriend.vertices) // 3)
                     mesh.subdivision_shape.indexed_vertices_list.delete()
                     mesh.subdivision_shape.indexed_vertices_list = mesh.subdivision_shape.shader_program.vertex_list_indexed(len(vertice)//3, GL_TRIANGLES,
                                 batch = self.batch,

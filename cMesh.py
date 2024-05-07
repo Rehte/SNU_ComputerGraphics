@@ -127,6 +127,7 @@ class cMesh:
         self.shape = None
         self.shape_controllPoints = []
 
+        self.base_color = (255, 255, 0, 255)
         self.subdivision_level = 1
         self.subdivision_shape = None
 
@@ -199,7 +200,7 @@ class cMesh:
             loc = transfrom @ Mat4.from_translation(Vec3(*vert.get_coord()))
             self.shape_controllPoints.append(renderer.add_shape(loc, self.controllPoint.vertices, None, self.controllPoint.indices, colors, True))
 
-        colors = ((255, 255, 0, 255) * (len(self.quadMesh.edgeFriend.vertices) // 3))
+        colors = (self.base_color * (len(self.quadMesh.edgeFriend.vertices) // 3))
         self.subdivision_shape = renderer.add_shape(transfrom, self.quadMesh.edgeFriend.vertices, self.get_normals(), self.get_indices(), colors)
     
     def export_obj_subdivided(self, filepath):
