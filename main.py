@@ -39,10 +39,7 @@ if __name__ == '__main__':
     myMesh2.toEdgeFriend()
 
     ti = time.time()
-    myMesh2.subdivide()
-    myMesh2.subdivide()
-    if sys.platform == 'darwin':
-        myMesh2.subdivide()
+    for i in range(myMesh2.subdivision_level-1):
         myMesh2.subdivide()
     te = time.time()
     print(te - ti)

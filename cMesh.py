@@ -127,8 +127,11 @@ class cMesh:
         self.shape = None
         self.shape_controllPoints = []
 
-        self.subdivision_level = 0
+        self.subdivision_level = 1
         self.subdivision_shape = None
+
+        self.update_vertices = False
+        self.update_mesh = False
 
         self.quadMesh = None
         self.edgeFriend = None
@@ -169,13 +172,14 @@ class cMesh:
         if sys.platform != 'darwin':
             self.quadMesh.edgeFriend.subdivide()
         else:
-            self.quadMesh.edgeFriend.subdivideMetal()
+            self.quadMesh.edgeFriend.subdivide()
+            # self.quadMesh.edgeFriend.subdivideMetal()
 
     def get_normals(self):
         if sys.platform !='darwin':
-            self.quadMesh.edgeFriend.calculateNormalsMetal()
+            self.quadMesh.edgeFriend.calculateNormals()
         else:
-            self.quadMesh.edgeFriend.calculateNormalsMetal()
+            self.quadMesh.edgeFriend.calculateNormals()
         return self.quadMesh.edgeFriend.normals
     
     def get_normals_metal(self):
@@ -193,7 +197,7 @@ class cMesh:
         colors = ((255, 255, 255, 255) * (len(self.controllPoint.vertices) // 3))
         for vert in self.verts:
             loc = transfrom @ Mat4.from_translation(Vec3(*vert.get_coord()))
-            self.shape_controllPoints.append(renderer.add_shape(loc, self.controllPoint.vertices, None, self.controllPoint.indices, colors))
+            self.shape_controllPoints.append(renderer.add_shape(loc, self.controllPoint.vertices, None, self.controllPoint.indices, colors, True))
 
         colors = ((255, 255, 0, 255) * (len(self.quadMesh.edgeFriend.vertices) // 3))
         self.subdivision_shape = renderer.add_shape(transfrom, self.quadMesh.edgeFriend.vertices, self.get_normals(), self.get_indices(), colors)

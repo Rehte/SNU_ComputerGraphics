@@ -27,6 +27,8 @@ class Control:
 
         self.dragging = False
         self.dragged_vertex_index = None
+        self.selected_vertex_index = set()
+        self.selected_face_index = set()
 
 
     def setup(self):
@@ -46,7 +48,20 @@ class Control:
             self.cam_yaw -= 0.5
         if symbol == pyglet.window.key.C:
             self.window.meshes[0].export_obj_subdivided('./model/Subdivision/test.obj')
-        
+        if symbol == pyglet.window.key.E:
+            self.window.doExtrusion = True
+        if symbol == pyglet.window.key._1:
+            self.window.meshes[0].subdivision_level = 1
+            self.window.meshes[0].update_mesh = True
+        if symbol == pyglet.window.key._2:
+            self.window.meshes[0].subdivision_level = 2
+            self.window.meshes[0].update_mesh = True
+        if symbol == pyglet.window.key._3:
+            self.window.meshes[0].subdivision_level = 3
+            self.window.meshes[0].update_mesh = True
+        if symbol == pyglet.window.key._4:
+            self.window.meshes[0].subdivision_level = 4
+            self.window.meshes[0].update_mesh = True
         self.update_camera()
     
     def on_key_release(self, symbol, modifier):
@@ -54,6 +69,8 @@ class Control:
             pyglet.app.exit()
         elif symbol == pyglet.window.key.SPACE:
             self.window.animate = not self.window.animate
+        if symbol == pyglet.window.key.E:
+            self.window.doExtrusion = False
         # TODO:
         pass
 
@@ -70,9 +87,31 @@ class Control:
             self.prev_y = y
             
             self.dragged_vertex_index = self.get_nearest_vertex(x, y)
-            if self.dragged_vertex_index:
+
+            if bool(modifier & pyglet.window.key.MOD_SHIFT) and self.dragged_vertex_index :
+                self.selected_vertex_index.add(self.dragged_vertex_index)
+                print(self.selected_vertex_index)
+                self.window.meshes[0].verts[self.dragged_vertex_index].flag_selected = True
+                self.update_selected_face_index()
+                self.prev_vertex_pos = Vec3(*self.window.meshes[0].get_vertex(self.dragged_vertex_index))
+
+            elif self.dragged_vertex_index:
+                for vert in self.window.meshes[0].verts:
+                    vert.flag_selected = False
+
+                self.selected_vertex_index = set([self.dragged_vertex_index])
+                self.window.meshes[0].verts[self.dragged_vertex_index].flag_selected = True
+                self.update_selected_face_index()
+
                 self.prev_vertex_pos = Vec3(*self.window.meshes[0].get_vertex(self.dragged_vertex_index))
                 self.distance_ratio = -(self.window.view_mat @ Vec4(*self.prev_vertex_pos.xyz, 1.0)).z
+            else:
+                self.selected_vertex_index = set()
+                for vert in self.window.meshes[0].verts:
+                    vert.flag_selected = False
+                self.update_selected_face_index()
+            
+            self.window.meshes[0].update_vertices = True
         pass
     
 
@@ -102,6 +141,7 @@ class Control:
             new_vertex_pos += new_vertex_delta * (self.distance_ratio)
             
             self.window.meshes[0].set_vertex(self.dragged_vertex_index, list(new_vertex_pos[:3]))
+            self.window.meshes[0].update_vertices = True
         pass
 
 
@@ -154,3 +194,13 @@ class Control:
         ray_near /= ray_near.w
 
         return Vec3(*ray_near.xyz), Vec3(*ray_far.xyz)
+
+    def update_selected_face_index(self):
+        for face in self.window.meshes[0].faces:
+            isSelected = True
+            for i in face.indices:
+                if not self.window.meshes[0].verts[i].flag_selected:
+                    isSelected = False
+                    break
+            face.flag_selected = isSelected
+
