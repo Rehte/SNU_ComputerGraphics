@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
     #draw shapes
     myMesh2.add_shape_renderer(translate_mat2, renderer)
-    # renderer.add_shape(translate_mat_bezier, cSpline.bezier_vertices, cSpline.bezier_normals, cSpline.bezier_surface_indices, (0, 255, 255, 255) * (len(cSpline.bezier_vertices) // 3))
-    # renderer.add_shape(translate_mat_bspline, cSpline.b_spline_vertices, cSpline.b_spline_normals, cSpline.b_spline_surface_indices, (255, 0, 255, 255) * (len(cSpline.b_spline_vertices) // 3))
+    renderer.add_shape(translate_mat_bezier, cSpline.bezier_vertices, cSpline.bezier_normals, cSpline.bezier_surface_indices, (0, 255, 255, 255) * (len(cSpline.bezier_vertices) // 3))
+    renderer.add_shape(translate_mat_bspline, cSpline.b_spline_vertices, cSpline.b_spline_normals, cSpline.b_spline_surface_indices, (255, 0, 255, 255) * (len(cSpline.b_spline_vertices) // 3))
 
     renderer.run()

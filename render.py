@@ -68,7 +68,7 @@ class RenderWindow(pyglet.window.Window):
 
     def update(self,dt) -> None:
         self.t += dt
-        print(round(1/dt))
+        # print(round(1/dt))
 
         for mesh in self.meshes:
             
@@ -81,8 +81,7 @@ class RenderWindow(pyglet.window.Window):
             if sys.platform == 'darwin':
                 mesh.subdivide()
                 mesh.subdivide()
-            print()
-
+                
             transform = mesh.shape.transform_mat
             for i, vert in enumerate(mesh.verts):
                 loc = transform @ Mat4.from_translation(Vec3(*vert.get_coord()))
