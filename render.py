@@ -2,9 +2,6 @@ import pyglet
 from pyglet import window, app, shapes
 from pyglet.window import mouse,key
 
-import imgui
-from imgui.integrations.pyglet import PygletRenderer
-
 from pyglet.graphics.shader import Shader, ShaderProgram
 from pyglet.gl import GL_TRIANGLES
 from pyglet.math import Mat4, Vec3
@@ -17,30 +14,6 @@ from cMesh_extrusion import *
 
 import shader
 from primitives import CustomGroup
-
-class UI:
-    def __init__(self, window):
-        imgui.create_context()
-        # self.renderer = PygletRenderer(window)
-        self.impl = PygletRenderer(window)
-        imgui.new_frame()  
-        imgui.end_frame()
-
-        # Window variables
-        self.test_input = 0
-
-    def render(self):
-        imgui.render()
-        self.impl.render(imgui.get_draw_data())
-        imgui.new_frame()
-
-        imgui.begin("Test Window")
-        imgui.text("This is the test window.")
-        changed, self.test_input = imgui.input_int("Integer Input Test", self.test_input)
-
-        imgui.end()
-
-        imgui.end_frame()
 
 glBindImageTextures
 class RenderWindow(pyglet.window.Window):

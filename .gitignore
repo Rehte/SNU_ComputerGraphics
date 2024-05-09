@@ -8,3 +8,7 @@ model/Subdivision/test_bezier.obj
 model/Subdivision/test_bspline.obj
 model/monkey.mtl
 model/Subdivision/test_ext.obj
+.DS_Store
+model/.DS_Store
+model/Subdivision/.DS_Store
+.DS_Store
